@@ -1,7 +1,3 @@
-"""
-FastAPI Application - TRANSTUR Chat Agent
-Aplicación modular con arquitectura limpia
-"""
 from typing import Optional
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -13,6 +9,7 @@ from memory import PostgresChatMemory
 from utils import GeminiClient
 from tools import init_qdrant_client, create_retrieval_tool_from_collection
 from agents import SimpleAgent
+from utils.openai_client import OpenAIClient
 
 
 app = FastAPI(
@@ -35,9 +32,7 @@ _memory: Optional[PostgresChatMemory] = None
 
 
 async def bootstrap() -> None:
-    """
-    Inicializa todos los servicios: PostgreSQL, Gemini, Qdrant y el agente
-    """
+
     global _agent, _memory
 
     print("[BOOTSTRAP] Inicializando conexión a PostgreSQL...")
@@ -54,13 +49,21 @@ async def bootstrap() -> None:
             _memory = None
 
     llm = None
-    if settings.GEMINI_API_KEY:
+    if settings.GEMINI_API_KEY and settings.STATUS == "production":
         try:
             gemini_client = GeminiClient(settings.GEMINI_API_KEY)
             llm = gemini_client
             print("[BOOTSTRAP]  Cliente Gemini inicializado correctamente")
         except Exception as e:
             print(f"[BOOTSTRAP]  No se pudo inicializar Gemini client: {e}")
+    
+    else:
+        try:
+            openai_client = OpenAIClient(api_key=settings.OPENAI_API_KEY, base_url=settings.OPENAI_URL)
+            llm = openai_client
+            print("[BOOTSTRAP]  Cliente OpenAI inicializado correctamente")
+        except Exception as e:
+            print(f"[BOOTSTRAP]  No se pudo inicializar OpenAI client: {e}")
 
     q_client = init_qdrant_client(url=settings.QDRANT_URL, api_key=settings.QDRANT_API_KEY)
     embeddings = None
@@ -90,7 +93,6 @@ async def bootstrap() -> None:
             q_client, 
             embeddings
         )
-        print("[BOOTSTRAP] ✅ Herramientas de Qdrant creadas correctamente")
 
     if llm and _memory:
         _agent = SimpleAgent(
@@ -116,15 +118,7 @@ async def on_startup():
 
 @app.post("/chat", response_model=ChatResponse)
 async def chat_endpoint(request: ChatRequest):
-    """
-    Endpoint para recibir mensajes desde el frontend.
-    
-    Args:
-        request: ChatRequest con chat_id y mensaje del usuario
-        
-    Returns:
-        ChatResponse con la respuesta del agente
-    """
+
     print(f"[CHAT] Mensaje recibido de {request.chat_id}: {request.message}")
     
     try:
@@ -154,16 +148,7 @@ async def chat_endpoint(request: ChatRequest):
 
 @app.get("/chat/{chat_id}/history")
 async def get_chat_history(chat_id: str, limit: int = 10):
-    """
-    Endpoint para obtener el historial de conversación de un chat.
-    
-    Args:
-        chat_id: ID del chat
-        limit: Número máximo de mensajes a recuperar (default: 10)
-        
-    Returns:
-        Lista de mensajes del historial
-    """
+
     print(f"[HISTORY] Solicitando historial de {chat_id} (limit={limit})")
     
     try:
@@ -193,12 +178,7 @@ async def get_chat_history(chat_id: str, limit: int = 10):
 
 @app.get("/health")
 async def health_check():
-    """
-    Endpoint para verificar el estado del servicio.
-    
-    Returns:
-        Estado del servicio y sus componentes
-    """
+
     return {
         "status": "ok",
         "agent_ready": _agent is not None,

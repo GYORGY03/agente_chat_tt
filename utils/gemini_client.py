@@ -1,6 +1,4 @@
-"""Cliente para interactuar con Gemini API."""
 import asyncio
-
 try:
     from langchain_google_genai import ChatGoogleGenerativeAI
 except Exception:
@@ -8,7 +6,6 @@ except Exception:
 
 
 class GeminiClient:
-    """Cliente para el LLM de Gemini."""
 
     def __init__(self, api_key: str, model: str = "gemini-2.5-flash"):
         if ChatGoogleGenerativeAI is None:
@@ -22,7 +19,6 @@ class GeminiClient:
         )
 
     async def generate(self, prompt: str) -> str:
-        """Genera una respuesta usando el LLM de Gemini."""
         loop = asyncio.get_event_loop()
 
         def sync_call():

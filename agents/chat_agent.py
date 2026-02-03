@@ -1,15 +1,9 @@
-"""
-Agente de Chat para TRANSTUR
-"""
 import asyncio
 from typing import Optional, List, Dict, Any, Callable
 
 
 class SimpleAgent:
-    """
-    Agente de chat con capacidades de clasificación de preguntas,
-    expansión de queries y búsqueda en bases de conocimiento
-    """
+
     
     def __init__(
         self,
@@ -20,15 +14,7 @@ class SimpleAgent:
         tool1_desc: str = "",
         tool2_desc: str = ""
     ):
-        """
-        Args:
-            llm: Cliente LLM (GeminiClient)
-            memory: Sistema de memoria (PostgresChatMemory)
-            tool1: Herramienta de búsqueda en KB-1 (Políticas y Legal)
-            tool2: Herramienta de búsqueda en KB-2 (Operaciones y Tarifas)
-            tool1_desc: Descripción de KB-1
-            tool2_desc: Descripción de KB-2
-        """
+
         self.llm = llm
         self.memory = memory
         self.tool1 = tool1
@@ -37,15 +23,7 @@ class SimpleAgent:
         self.tool2_desc = tool2_desc
     
     async def expand_query(self, query: str) -> List[str]:
-        """
-        Expande la query con sinónimos para mejorar resultados de búsqueda
-        
-        Args:
-            query: Query original del usuario
-            
-        Returns:
-            Lista de queries [original, expandida]
-        """
+
         query_lower = query.lower()
         
         synonyms = {

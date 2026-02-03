@@ -5,14 +5,15 @@ load_dotenv()
 
 class Settings:
     """Configuración de la aplicación."""
-    
-    GEMINI_API_KEY = "AIzaSyBMt3o2djQMpbKd_p6Uk1n3znFxefp1rGw"
-    
-    POSTGRES_CONNECTION_STRING = "postgresql://jorge:laberinto@localhost:5432/labtech_bot"
+    STATUS="development"  # Cambiar a "production" en entorno productivo
+    GEMINI_API_KEY = "AIzaSyDuHAxoJue5Zova1ccbtXIgVjboJk76POc"
+    OPENAI_URL="http://127.0.0.1:1234/v1"
+    OPENAI_API_KEY="not-needed"
+    POSTGRES_CONNECTION_STRING = "postgresql://postgres:laberinto@localhost:5432/postgres"
     
     QDRANT_URL = "http://localhost:6333"
     QDRANT_API_KEY = "e5362baf-c777-4d57-a609-6eaf1f9e87f6"
-    QDRANT_COLLECTION_1 = "documentos_pdf"  
+    QDRANT_COLLECTION_1 = "documentos_gemini"  
     QDRANT_COLLECTION_2 = "documentos_tarifas"  
     
     SERVER_HOST = "0.0.0.0"
