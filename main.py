@@ -109,9 +109,7 @@ async def bootstrap() -> None:
 
 @app.on_event("startup")
 async def on_startup():
-    """
-    Evento de inicio de FastAPI - ejecuta el bootstrap
-    """
+
     await bootstrap()
 
 

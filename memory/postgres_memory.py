@@ -1,4 +1,3 @@
-"""Sistema de memoria persistente usando PostgreSQL."""
 from typing import Dict, List, Optional
 
 try:
@@ -8,7 +7,6 @@ except Exception:
 
 
 class PostgresChatMemory:
-    """Memoria de conversación persistente en PostgreSQL."""
 
     def __init__(self, dsn: str):
         if asyncpg is None:
@@ -19,7 +17,6 @@ class PostgresChatMemory:
         self._pool: Optional[asyncpg.Pool] = None
 
     async def init(self) -> None:
-        """Inicializa el pool de conexiones y crea la tabla si no existe."""
         if self._pool:
             print("[POSTGRES] Pool de conexiones ya inicializado")
             return
@@ -52,7 +49,6 @@ class PostgresChatMemory:
             raise
 
     async def add_message(self, chat_id: str, role: str, content: str) -> None:
-        """Agrega un mensaje al historial."""
         if not self._pool:
             await self.init()
         
@@ -72,7 +68,6 @@ class PostgresChatMemory:
             raise
 
     async def get_recent(self, chat_id: str, limit: int = 10) -> List[Dict[str, str]]:
-        """Obtiene los mensajes recientes de un chat."""
         if not self._pool:
             await self.init()
         async with self._pool.acquire() as conn:

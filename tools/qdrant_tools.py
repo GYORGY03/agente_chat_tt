@@ -1,4 +1,3 @@
-"""Herramientas de recuperación de información desde Qdrant."""
 import asyncio
 from typing import Any, Dict, List, Optional
 
@@ -13,7 +12,6 @@ except Exception:
 
 
 def init_qdrant_client(url: str, api_key: Optional[str] = None):
-    """Inicializa el cliente de Qdrant (síncrono para compatibilidad con LangChain)."""
     if QdrantClient is None:
         print("WARNING: qdrant-client o langchain no instalados; las herramientas RAG no estarán disponibles.")
         return None
@@ -29,7 +27,6 @@ def create_retrieval_tool_from_collection(
     qdrant_client, 
     embeddings
 ) -> Any:
-    """Crea una herramienta de recuperación asíncrona desde una colección de Qdrant."""
 
     if QdrantVectorStore is None or Document is None:
         async def missing_tool(query: str, metadata_filter: Optional[Dict] = None):
@@ -51,7 +48,6 @@ def create_retrieval_tool_from_collection(
         metadata_filter: Optional[Dict] = None, 
         score_threshold: float = 0.3
     ) -> List[Any]:
-        """Busca documentos relevantes en Qdrant con re-ranking híbrido (async con executor)."""
         print(f"[QDRANT TOOL] Ejecutando búsqueda asíncrona: query='{query[:50]}...', k={k}")
         
         try:

@@ -55,18 +55,7 @@ class SimpleAgent:
             return [query]
     
     async def classify_question(self, query: str) -> Dict[str, Any]:
-        """
-        Clasifica la pregunta para priorizar búsqueda en KB correcta
-        
-        Args:
-            query: Query del usuario
-            
-        Returns:
-            Dict con:
-                - prioritize: 'kb1', 'kb2' o None
-                - kb1_filter: Filtros de metadata para KB-1
-                - kb2_filter: Filtros de metadata para KB-2
-        """
+
         query_lower = query.lower()
         
         legal_keywords = [
@@ -110,16 +99,7 @@ class SimpleAgent:
         return result
 
     async def run(self, chat_id: str, user_message: str) -> str:
-        """
-        Ejecuta el agente para procesar un mensaje del usuario
-        
-        Args:
-            chat_id: ID del chat
-            user_message: Mensaje del usuario
-            
-        Returns:
-            Respuesta del agente
-        """
+
         await self.memory.add_message(chat_id, "user", user_message)
 
         recent = await self.memory.get_recent(chat_id, limit=8)
@@ -141,7 +121,6 @@ class SimpleAgent:
         main_query = expanded_queries[0]
         
         async def search_kb1():
-            """Búsqueda en KB-1 con manejo de errores"""
             if not self.tool1:
                 print(f"[QDRANT]  KB-1: Herramienta no disponible")
                 return []
@@ -172,7 +151,6 @@ class SimpleAgent:
                 return []
         
         async def search_kb2():
-            """Búsqueda en KB-2 con manejo de errores"""
             if not self.tool2:
                 print(f"[QDRANT]  KB-2: Herramienta no disponible")
                 return []
