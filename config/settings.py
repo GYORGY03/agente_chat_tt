@@ -13,8 +13,8 @@ class Settings:
     
     QDRANT_URL = "http://localhost:6333"
     QDRANT_API_KEY = "e5362baf-c777-4d57-a609-6eaf1f9e87f6"
-    QDRANT_COLLECTION_1 = "documentos_definitivos"  
-    QDRANT_COLLECTION_2 = "documentos_tarifas"  
+    QDRANT_COLLECTION_1 = "documentos_local"  
+    QDRANT_COLLECTION_2 = "documentos_tarifas_local"  
     
     SERVER_HOST = "0.0.0.0"
     SERVER_PORT = 5678

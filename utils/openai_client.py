@@ -1,4 +1,5 @@
 import asyncio
+from typing import List
 try:
     from openai import OpenAI
 except Exception:
@@ -6,7 +7,7 @@ except Exception:
         OpenAI = None
 
 class OpenAIClient:
-    def __init__(self, api_key: str, base_url: str):
+    def __init__(self, api_key: str, base_url: str, embedding_model: str = "text-embedding-multilingual-e5-large-instruct"):
         if OpenAI is None:
             raise RuntimeError("Instala openai: pip install openai")
         if not api_key:
@@ -15,6 +16,7 @@ class OpenAIClient:
             api_key=api_key,
             base_url=base_url
         )
+        self.embedding_model = embedding_model
 
     async def generate(self, prompt: str) -> str:
         loop = asyncio.get_event_loop()
@@ -28,3 +30,19 @@ class OpenAIClient:
             return response.choices[0].message.content
 
         return await loop.run_in_executor(None, sync_call)
+    
+    def embed_query(self, text: str) -> List[float]:
+        """Genera embedding para una consulta usando el modelo local."""
+        response = self.client.embeddings.create(
+            model=self.embedding_model,
+            input=text
+        )
+        return response.data[0].embedding
+    
+    def embed_documents(self, texts: List[str]) -> List[List[float]]:
+        """Genera embeddings para múltiples documentos."""
+        response = self.client.embeddings.create(
+            model=self.embedding_model,
+            input=texts
+        )
+        return [item.embedding for item in response.data]

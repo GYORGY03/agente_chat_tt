@@ -44,9 +44,9 @@ def create_retrieval_tool_from_collection(
 
     async def tool_async(
         query: str, 
-        k: int = 3, 
+        k: int = 18, 
         metadata_filter: Optional[Dict] = None, 
-        score_threshold: float = 0.3
+        score_threshold: float = 0.35
     ) -> List[Any]:
         print(f"[QDRANT TOOL] Ejecutando búsqueda asíncrona: query='{query[:50]}...', k={k}")
         

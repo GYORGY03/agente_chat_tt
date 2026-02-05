@@ -2,6 +2,7 @@ from typing import Optional
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
+from langchain_openai import OpenAIEmbeddings
 
 from config import settings
 from models import ChatRequest, ChatResponse
@@ -68,13 +69,25 @@ async def bootstrap() -> None:
     q_client = init_qdrant_client(url=settings.QDRANT_URL, api_key=settings.QDRANT_API_KEY)
     embeddings = None
     try:
-        embeddings = GoogleGenerativeAIEmbeddings(
-            model="models/text-embedding-004",
-            google_api_key=settings.GEMINI_API_KEY
-        )
-        print("[BOOTSTRAP]  Embeddings de Gemini inicializados correctamente")
+        if settings.STATUS == "production" and settings.GEMINI_API_KEY:
+            embeddings = GoogleGenerativeAIEmbeddings(
+                model="models/text-embedding-004",
+                google_api_key=settings.GEMINI_API_KEY
+            )
+            print("[BOOTSTRAP]  Embeddings de Gemini inicializados correctamente")
+        else:
+            print("[BOOTSTRAP]  Usando embeddings de OpenAI local para entorno de desarrollo")
+            embeddings = OpenAIEmbeddings(
+                model="text-embedding-multilingual-e5-large-instruct",
+                openai_api_key=settings.OPENAI_API_KEY,
+                openai_api_base=settings.OPENAI_URL,
+                check_embedding_ctx_length=False  # Desactiva validación de longitud
+            )
+            print("[BOOTSTRAP]  Embeddings locales (text-embedding-multilingual-e5-large-instruct) inicializados correctamente")
     except Exception as e:
-        print(f"[BOOTSTRAP]  No se pudieron inicializar embeddings de Gemini: {e}")
+        print(f"[BOOTSTRAP]  Error inicializando embeddings: {e}")
+        import traceback
+        traceback.print_exc()
         embeddings = None
 
     tool1 = None
