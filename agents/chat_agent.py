@@ -81,20 +81,44 @@ class SimpleAgent:
         result = {
             'prioritize': None,
             'kb1_filter': None,
-            'kb2_filter': None
+            'kb2_filter': None,
+            'threshold_kb1': 0.60,  # Default moderado
+            'threshold_kb2': 0.60   # Default moderado
         }
         
         kb1_matches = sum(1 for kw in legal_keywords if kw in query_lower)
         kb2_matches = sum(1 for kw in tarifa_keywords if kw in query_lower)
         
+        # Calcular diferencia para determinar confianza de clasificación
+        match_diff = abs(kb1_matches - kb2_matches)
+        
         if kb1_matches > kb2_matches:
             result['prioritize'] = 'kb1'
-            print(f"[CLASIFICACIÓN] Pregunta clasificada como: POLÍTICAS/LEGAL")
+            # KB1 prioritaria: threshold más permisivo en KB1, más estricto en KB2
+            if match_diff >= 3:  # Alta confianza
+                result['threshold_kb1'] = 0.50
+                result['threshold_kb2'] = 0.70
+                print(f"[CLASIFICACIÓN] POLÍTICAS/LEGAL (Alta confianza: {kb1_matches} vs {kb2_matches}) - Thresholds: KB1=0.50, KB2=0.70")
+            else:  # Confianza moderada
+                result['threshold_kb1'] = 0.55
+                result['threshold_kb2'] = 0.65
+                print(f"[CLASIFICACIÓN] POLÍTICAS/LEGAL (Confianza moderada: {kb1_matches} vs {kb2_matches}) - Thresholds: KB1=0.55, KB2=0.65")
         elif kb2_matches > kb1_matches:
             result['prioritize'] = 'kb2'
-            print(f"[CLASIFICACIÓN] Pregunta clasificada como: TARIFAS/OPERACIONES")
+            # KB2 prioritaria: threshold más permisivo en KB2, más estricto en KB1
+            if match_diff >= 3:  # Alta confianza
+                result['threshold_kb1'] = 0.70
+                result['threshold_kb2'] = 0.50
+                print(f"[CLASIFICACIÓN] TARIFAS/OPERACIONES (Alta confianza: {kb2_matches} vs {kb1_matches}) - Thresholds: KB1=0.70, KB2=0.50")
+            else:  # Confianza moderada
+                result['threshold_kb1'] = 0.65
+                result['threshold_kb2'] = 0.55
+                print(f"[CLASIFICACIÓN] TARIFAS/OPERACIONES (Confianza moderada: {kb2_matches} vs {kb1_matches}) - Thresholds: KB1=0.65, KB2=0.55")
         else:
-            print(f"[CLASIFICACIÓN] Pregunta clasificada como: GENERAL (buscar en ambas KB)")
+            # Sin clasificación clara: thresholds moderados y balanceados
+            result['threshold_kb1'] = 0.55
+            result['threshold_kb2'] = 0.55
+            print(f"[CLASIFICACIÓN] GENERAL (sin preferencia clara: {kb1_matches} vs {kb2_matches}) - Thresholds: KB1=0.55, KB2=0.55")
         
         return result
 
@@ -114,9 +138,10 @@ class SimpleAgent:
         k1 = 8 if classification['prioritize'] == 'kb1' else 5
         k2 = 5 if classification['prioritize'] == 'kb1' else 8
         
-        score_threshold_kb1 = 0.0  
-        score_threshold_kb2 = 0.0  
-        print(f"\n[QDRANT]  Iniciando búsquedas paralelas - KB-1 (k={k1}) y KB-2 (k={k2})")
+        # Usar thresholds dinámicos de la clasificación
+        score_threshold_kb1 = classification.get('threshold_kb1', 0.60)
+        score_threshold_kb2 = classification.get('threshold_kb2', 0.60)
+        print(f"\n[QDRANT]  Iniciando búsquedas paralelas - KB-1 (k={k1}, threshold={score_threshold_kb1}) y KB-2 (k={k2}, threshold={score_threshold_kb2})")
         
         main_query = expanded_queries[0]
         
