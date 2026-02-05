@@ -90,8 +90,13 @@ def create_retrieval_tool_from_collection(
             
             scored_docs.sort(key=lambda x: x['combined_score'], reverse=True)
             
+            # Aplicar threshold al combined_score
             filtered_docs = []
-            for idx, item in enumerate(scored_docs[:k]):
+            docs_above_threshold = [item for item in scored_docs if item['combined_score'] >= score_threshold]
+            
+            print(f"[QDRANT TOOL] Filtrado por threshold={score_threshold}: {len(docs_above_threshold)} de {len(scored_docs)} documentos pasan")
+            
+            for idx, item in enumerate(docs_above_threshold[:k]):
                 doc = item['doc']
                 print(f"[QDRANT TOOL] Doc {idx+1}: vector={item['vector_score']:.4f}, terms={item['term_score']:.2f}, combined={item['combined_score']:.4f}, len={len(item['content'])}, preview={item['content'][:80]}...")
                 
