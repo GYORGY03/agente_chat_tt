@@ -32,7 +32,6 @@ class OpenAIClient:
         return await loop.run_in_executor(None, sync_call)
     
     def embed_query(self, text: str) -> List[float]:
-        """Genera embedding para una consulta usando el modelo local."""
         response = self.client.embeddings.create(
             model=self.embedding_model,
             input=text
@@ -40,7 +39,6 @@ class OpenAIClient:
         return response.data[0].embedding
     
     def embed_documents(self, texts: List[str]) -> List[List[float]]:
-        """Genera embeddings para múltiples documentos."""
         response = self.client.embeddings.create(
             model=self.embedding_model,
             input=texts

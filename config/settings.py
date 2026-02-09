@@ -5,7 +5,7 @@ load_dotenv()
 
 class Settings:
     """Configuración de la aplicación."""
-    STATUS="development"  # Cambiar a "production" en entorno productivo
+    STATUS="development"
     GEMINI_API_KEY = "AIzaSyCPsvHnvCO76pPcV8jKwbsN1xSBpTFK3cY"
     OPENAI_URL="http://127.0.0.1:1234/v1"
     OPENAI_API_KEY="not-needed"

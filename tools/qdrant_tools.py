@@ -90,7 +90,6 @@ def create_retrieval_tool_from_collection(
             
             scored_docs.sort(key=lambda x: x['combined_score'], reverse=True)
             
-            # Aplicar threshold al combined_score
             filtered_docs = []
             docs_above_threshold = [item for item in scored_docs if item['combined_score'] >= score_threshold]
             
