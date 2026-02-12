@@ -9,3 +9,4 @@ langchain-core
 langchain-google-genai
 uvicorn
 openai
+tenacity

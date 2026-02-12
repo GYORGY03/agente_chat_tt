@@ -1,5 +1,5 @@
 from typing import Dict, List, Optional
-
+from tenacity import retry, stop_after_attempt, wait_exponential
 try:
     import asyncpg
 except Exception:  
@@ -16,6 +16,7 @@ class PostgresChatMemory:
         self._dsn = dsn
         self._pool: Optional[asyncpg.Pool] = None
 
+    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=1, max=10))
     async def init(self) -> None:
         if self._pool:
             print("[POSTGRES] Pool de conexiones ya inicializado")
@@ -26,7 +27,6 @@ class PostgresChatMemory:
         
         try:
             self._pool = await asyncpg.create_pool(self._dsn)
-            print("[POSTGRES] Pool de conexiones creado exitosamente")
             
             async with self._pool.acquire() as conn:
                 await conn.execute(
@@ -39,21 +39,18 @@ class PostgresChatMemory:
                         created_at TIMESTAMPTZ DEFAULT NOW()
                     );
                     """
-                )
-                print("[POSTGRES]  Tabla 'chat_messages_web' verificada/creada")
-                
+                )                
                 result = await conn.fetchval("SELECT COUNT(*) FROM chat_messages_web")
                 print(f"[POSTGRES]  Mensajes en base de datos: {result}")
         except Exception as e:
             print(f"[POSTGRES] Error al conectar: {type(e).__name__}: {str(e)}")
             raise
 
+    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=1, max=10))
     async def add_message(self, chat_id: str, role: str, content: str) -> None:
         if not self._pool:
             await self.init()
-        
-        print(f"[POSTGRES] Guardando mensaje - Chat: {chat_id}, Role: {role}")
-        
+                
         try:
             async with self._pool.acquire() as conn:
                 await conn.execute(
@@ -64,9 +61,9 @@ class PostgresChatMemory:
                 )
                 print(f"[POSTGRES]  Mensaje guardado exitosamente")
         except Exception as e:
-            print(f"[POSTGRES]  Error al guardar mensaje: {type(e).__name__}: {str(e)}")
             raise
 
+    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=1, max=10))
     async def get_recent(self, chat_id: str, limit: int = 10) -> List[Dict[str, str]]:
         if not self._pool:
             await self.init()

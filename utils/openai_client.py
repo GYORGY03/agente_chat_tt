@@ -1,4 +1,5 @@
 import asyncio
+from tenacity import retry, stop_after_attempt, wait_exponential
 from typing import List
 try:
     from openai import OpenAI
@@ -18,6 +19,10 @@ class OpenAIClient:
         )
         self.embedding_model = embedding_model
 
+    @retry(
+            stop=stop_after_attempt(3), 
+            wait=wait_exponential(multiplier=1, min=1, max=10)
+            )
     async def generate(self, prompt: str) -> str:
         loop = asyncio.get_event_loop()
 

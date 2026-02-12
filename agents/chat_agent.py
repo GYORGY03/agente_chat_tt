@@ -1,5 +1,6 @@
 import asyncio
 from typing import Optional, List, Dict, Any, Callable
+from pathlib import Path
 
 
 class SimpleAgent:
@@ -21,7 +22,15 @@ class SimpleAgent:
         self.tool2 = tool2
         self.tool1_desc = tool1_desc
         self.tool2_desc = tool2_desc
-    
+
+        prompt_path = Path(__file__).parent.parent / "prompts" / "system_prompt.txt"
+        
+        if prompt_path.exists():
+            self.system_prompt_template = prompt_path.read_text(encoding="utf-8")
+            print(f"[AGENT] Prompt cargado desde {prompt_path}")
+        else:
+            print(f"[AGENT] Archivo de prompt no encontrado: {prompt_path}")
+                
     async def expand_query(self, query: str) -> List[str]:
 
         query_lower = query.lower()
@@ -89,13 +98,11 @@ class SimpleAgent:
         kb1_matches = sum(1 for kw in legal_keywords if kw in query_lower)
         kb2_matches = sum(1 for kw in tarifa_keywords if kw in query_lower)
         
-        # Calcular diferencia para determinar confianza de clasificación
         match_diff = abs(kb1_matches - kb2_matches)
         
         if kb1_matches > kb2_matches:
             result['prioritize'] = 'kb1'
-            # KB1 prioritaria: threshold más permisivo en KB1, más estricto en KB2
-            if match_diff >= 3:  # Alta confianza
+            if match_diff >= 3:  
                 result['threshold_kb1'] = 0.50
                 result['threshold_kb2'] = 0.70
                 print(f"[CLASIFICACIÓN] POLÍTICAS/LEGAL (Alta confianza: {kb1_matches} vs {kb2_matches}) - Thresholds: KB1=0.50, KB2=0.70")
@@ -141,7 +148,6 @@ class SimpleAgent:
         # Usar thresholds dinámicos de la clasificación
         score_threshold_kb1 = classification.get('threshold_kb1', 0.60)
         score_threshold_kb2 = classification.get('threshold_kb2', 0.60)
-        print(f"\n[QDRANT]  Iniciando búsquedas paralelas - KB-1 (k={k1}, threshold={score_threshold_kb1}) y KB-2 (k={k2}, threshold={score_threshold_kb2})")
         
         main_query = expanded_queries[0]
         
@@ -158,7 +164,6 @@ class SimpleAgent:
                 )
                 
                 if len(results) < 2 and len(expanded_queries) > 1:
-                    print(f"[QDRANT] KB-1: Pocos resultados, intentando con query expandida...")
                     results_expanded = await self.tool1(
                         expanded_queries[1], 
                         k=k1, 
@@ -188,7 +193,6 @@ class SimpleAgent:
                 )
                 
                 if len(results) < 2 and len(expanded_queries) > 1:
-                    print(f"[QDRANT] KB-2: Pocos resultados, intentando con query expandida...")
                     results_expanded = await self.tool2(
                         expanded_queries[1], 
                         k=k2, 
@@ -224,8 +228,6 @@ class SimpleAgent:
             
             if content:
                 preview = content[:300] + "..." if len(content) > 300 else content
-                print(f"[QDRANT] KB-1 Doc #{i} [Combined:{combined_score} Vector:{vector_score} Terms:{term_score}]")
-                print(f"         {preview}\n")
             else:
                 print(f"[QDRANT] KB-1 Doc #{i}:  CONTENIDO VACÍO\n")
         
@@ -239,92 +241,50 @@ class SimpleAgent:
             
             if content:
                 preview = content[:300] + "..." if len(content) > 300 else content
-                print(f"[QDRANT] KB-2 Doc #{i} [Combined:{combined_score} Vector:{vector_score} Terms:{term_score}]")
-                print(f"         {preview}\n")
             else:
                 print(f"[QDRANT] KB-2 Doc #{i}:  CONTENIDO VACÍO\n")
         
         print(f"\n[QDRANT] Resumen: KB-1={len(docs1)} docs, KB-2={len(docs2)} docs\n")
 
-        prompt_parts = [
-            "1. ROL, IDENTIDAD Y OBJETIVO",
-            "Identidad: Eres un Agente Virtual de Atención al Cliente altamente profesional para TRANSTUR, S.A. (marcas Cubacar, Havanautos y REX).",
-            "Tono: Profesional y Absolutamente Preciso.",
-            "Misión Principal: Responder todas las consultas de los clientes basándote EXCLUSIVAMENTE en la información de las bases de conocimiento.",
-            "2. RESTRICCIONES DE CONOCIMIENTO (PROTOCOLO CRÍTICO)",
-            "2.1. FUENTES DE CONOCIMIENTO",
-            "Tu información proviene de dos bases de datos (Qdrant) que serán consultadas simultáneamente. Debes identificar la fuente de cada fragmento:",
-            "KB-1: POLÍTICAS Y LEGAL (Términos, Condiciones de Renta, Políticas de Privacidad).",
-            "KB-2: OPERACIONES Y TARIFAS (Datos Operacionales, Precios, Ubicaciones, Logística).",
-            "2.2. REGLAS DE ORO",
-            "PROHIBICIÓN ABSOLUTA: NUNCA debes inventar, adivinar, especular o utilizar conocimiento previo o externo a los fragmentos de texto recuperados de KB-1 y KB-2 PARA CONSULTAS SOBRE SERVICIOS, POLÍTICAS Y OPERACIONES.",
-            "EXCEPCIÓN - USO DEL HISTORIAL: Para preguntas personales o de contexto conversacional (como '¿Sabes mi nombre?', '¿De qué estábamos hablando?', saludos, etc.), SÍ PUEDES y DEBES usar la información del HISTORIAL DE CONVERSACIÓN. El historial es tu memoria de la conversación actual con este cliente específico.",
-            "FORMATO: Sintetiza la información clara y concisamente. Utiliza viñetas para respuestas que cubran múltiples puntos.",
-            "- Solo si NO hay NADA relacionado (documentos completamente irrelevantes): Indica que no tienes esa información específica y proporciona contactos oficiales",
-            "3. INSTRUCCIONES DE ACCIÓN Y PRIORIZACIÓN",
-            "Al formular una respuesta, utiliza la siguiente jerarquía de acción y fuente:",
-            "INFERENCIA INTELIGENTE: Si la pregunta es sobre un tema específico y no encuentras información directa, pero encuentras información relacionada (ej: pregunta sobre medidas de seguridad y encuentras info sobre responsabilidades, daños, seguros), usa esa información para dar una respuesta útil.",
-            "CONTRATO Y VIGENCIA: Para preguntas sobre la duración del alquiler o el contrato, busca en KB-1."
-            "MODIFICACIONES Y CANCELACIONES: Para cambios de reserva, busca en KB-1 e instruye al cliente a contactar a cubacar@transtur.cu (desde el correo de registro).",
-            "TARIFAS Y DISPONIBILIDAD (Datos Variables): Si la consulta es sobre precios, tarifas, disponibilidad de modelos, o ubicaciones específicas de oficinas, prioriza la información de KB-2: OPERACIONES.",
-            "GARANTÍA DEL VEHÍCULO: Si el cliente pregunta sobre modelos o marcas, busca en KB-1 y aclara que solo se garantiza la categoría del auto, no el modelo específico.",
-            "PENALIDADES: Si se menciona la entrega en otra oficina (Drop-Off), busca en KB-1 e informa el cargo de drop-off más una penalidad del 50%.",
-            "",
-            "CANALES DE CONTACTO: Para cualquier pregunta sobre cómo contactar a la empresa, prioriza KB-1 y proporciona:",
-            "INSTRUCCIÓN CLAVE DE FORMATO:",
-            "FORMATO DE RESPUESTA: Responde SIEMPRE en texto plano, claro y profesional. NO uses formato Markdown.",
-            "- NO uses asteriscos (*) para negritas o cursivas",
-            "- NO uses almohadillas (#) para títulos",
-            "- NO uses guiones bajos (_) para formato",
-            "- Usa texto simple con viñetas (guiones -) cuando sea necesario",
-            "- Separa secciones con saltos de línea simples",
-            "- Mantén un tono profesional y amigable sin formatos especiales",
-            "Cuando respondas con información extraída de la base de datos (ej. tarifas, detalles de productos), debes REESTRUCTURAR y REFORMATAR el texto en formato simple y claro, eliminando cualquier carácter de marcado interno que pueda confundir al usuario.",
-            "",
-            "---",
-            "",
-            f"CONTEXTO DE KB-1 (POLÍTICAS Y LEGAL): {self.tool1_desc}",
-        ]
+        kb1_context = self._format_docs(docs1)
+        kb2_context = self._format_docs(docs2)
+        history = self._format_history(recent)
         
-        if docs1:
-            for d in docs1:
-                content = getattr(d, 'page_content', '') or str(d)
-                if content:
-                    prompt_parts.append(f"- {content}")
-        else:
-            prompt_parts.append("(Sin información relevante en KB-1)")
-        
-        prompt_parts.append("")
-        prompt_parts.append(f"CONTEXTO DE KB-2 (OPERACIONES Y TARIFAS): {self.tool2_desc}")
-        
-        if docs2:
-            for d in docs2:
-                content = getattr(d, 'page_content', '') or str(d)
-                if content:
-                    prompt_parts.append(f"- {content}")
-        else:
-            prompt_parts.append("(Sin información relevante en KB-2)")
-        
-        prompt_parts.append("")
-        prompt_parts.append("HISTORIAL DE CONVERSACIÓN:")
-        
-        if recent:
-            for m in recent:
-                role = "Cliente" if m['role'] == "user" else "Agente"
-                prompt_parts.append(f"{role}: {m['content']}")
-        else:
-            prompt_parts.append("(Primera interacción)")
-        
-        prompt_parts.append("")
-        prompt_parts.append(f"CONSULTA ACTUAL DEL CLIENTE:")
-        prompt_parts.append(user_message)
-        prompt_parts.append("")
-        prompt_parts.append("TU RESPUESTA (siguiendo todas las instrucciones anteriores):")
-
-        prompt = "\n".join(prompt_parts)
+        prompt = self.system_prompt_template.format(
+            kb1_desc=self.tool1_desc,
+            kb1_context=kb1_context,
+            kb2_desc=self.tool2_desc,
+            kb2_context=kb2_context,
+            history=history,
+            query=user_message
+        )
 
         reply = await self.llm.generate(prompt)
 
         await self.memory.add_message(chat_id, "agent", reply)
 
         return reply
+    
+    def _format_docs(self, docs: List[Any]) -> str:
+        if not docs:
+            return "(Sin información relevante)"
+        
+        lines = []
+        for doc in docs:
+            content = getattr(doc, 'page_content', '') or str(doc)
+            if content:
+                lines.append(f"- {content}")
+        
+        return "\n".join(lines) if lines else "(Sin información relevante)"
+
+    def _format_history(self, messages: List[Dict[str, str]]) -> str:
+        if not messages:
+            return "(Primera interacción)"
+        
+        lines = []
+        for msg in messages:
+            role = "Cliente" if msg['role'] == "user" else "Agente"
+            lines.append(f"{role}: {msg['content']}")
+        
+        return "\n".join(lines)
+

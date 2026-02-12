@@ -1,4 +1,5 @@
 import asyncio
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 try:
     from langchain_google_genai import ChatGoogleGenerativeAI
 except Exception:
@@ -18,6 +19,11 @@ class GeminiClient:
             temperature=0.0,
         )
 
+    @retry(
+            stop=stop_after_attempt(3), 
+            wait=wait_exponential(multiplier=2, min=2, max=30),
+            retry=retry_if_exception_type((TimeoutError, ConnectionError))
+            )
     async def generate(self, prompt: str) -> str:
         loop = asyncio.get_event_loop()
 

@@ -48,7 +48,6 @@ def create_retrieval_tool_from_collection(
         metadata_filter: Optional[Dict] = None, 
         score_threshold: float = 0.35
     ) -> List[Any]:
-        print(f"[QDRANT TOOL] Ejecutando búsqueda asíncrona: query='{query[:50]}...', k={k}")
         
         try:
             search_k = k * 4  
@@ -57,9 +56,7 @@ def create_retrieval_tool_from_collection(
             results = await loop.run_in_executor(
                 None, 
                 lambda: vectorstore.similarity_search_with_score(query, k=search_k)
-            )
-            print(f"[QDRANT TOOL] Resultados brutos obtenidos: {len(results)}")
-            
+            )            
             query_lower = query.lower()
             query_terms = set(query_lower.split())
             
@@ -93,11 +90,9 @@ def create_retrieval_tool_from_collection(
             filtered_docs = []
             docs_above_threshold = [item for item in scored_docs if item['combined_score'] >= score_threshold]
             
-            print(f"[QDRANT TOOL] Filtrado por threshold={score_threshold}: {len(docs_above_threshold)} de {len(scored_docs)} documentos pasan")
             
             for idx, item in enumerate(docs_above_threshold[:k]):
                 doc = item['doc']
-                print(f"[QDRANT TOOL] Doc {idx+1}: vector={item['vector_score']:.4f}, terms={item['term_score']:.2f}, combined={item['combined_score']:.4f}, len={len(item['content'])}, preview={item['content'][:80]}...")
                 
                 if not hasattr(doc, 'metadata'):
                     doc.metadata = {}
@@ -107,7 +102,6 @@ def create_retrieval_tool_from_collection(
                 
                 filtered_docs.append(doc)
             
-            print(f"[QDRANT TOOL] Retornando {len(filtered_docs)} documentos (de {len(results)} candidatos)")
             return filtered_docs
             
         except Exception as e:

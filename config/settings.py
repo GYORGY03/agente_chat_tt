@@ -1,30 +1,24 @@
-"""Configuración central del proyecto."""
 from dotenv import load_dotenv
+import os
 
 load_dotenv()
 
 class Settings:
-    """Configuración de la aplicación."""
-    STATUS="development"
-    GEMINI_API_KEY = "AIzaSyCPsvHnvCO76pPcV8jKwbsN1xSBpTFK3cY"
-    OPENAI_URL="http://127.0.0.1:1234/v1"
-    OPENAI_API_KEY="not-needed"
-    POSTGRES_CONNECTION_STRING = "postgresql://postgres:laberinto@localhost:5432/postgres"
+    STATUS=os.getenv("STATUS", "development")
+    GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+    OPENAI_URL=os.getenv("OPENAI_URL")
+    OPENAI_API_KEY=os.getenv("OPENAI_API_KEY", "not-needed")
+    POSTGRES_CONNECTION_STRING = os.getenv("POSTGRES_CONNECTION_STRING")
     
-    QDRANT_URL = "http://localhost:6333"
-    QDRANT_API_KEY = "e5362baf-c777-4d57-a609-6eaf1f9e87f6"
-    QDRANT_COLLECTION_1 = "documentos_local"  
-    QDRANT_COLLECTION_2 = "documentos_tarifas_local"  
+    QDRANT_URL = os.getenv("QDRANT_URL")
+    QDRANT_API_KEY = os.getenv("QDRANT_API_KEY")
+    QDRANT_COLLECTION_1 = os.getenv("QDRANT_COLLECTION_1")  
+    QDRANT_COLLECTION_2 = os.getenv("QDRANT_COLLECTION_2")  
     
-    SERVER_HOST = "0.0.0.0"
-    SERVER_PORT = 5678
+    SERVER_HOST = os.getenv("SERVER_HOST")
+    SERVER_PORT = int(os.getenv("SERVER_PORT"))
     
-    CORS_ORIGINS = [
-        "https://agent-tt.netlify.app",
-        "http://localhost:3000",
-        "http://localhost:5173",
-        "*"
-    ]
+    CORS_ORIGINS = os.getenv("CORS_ORIGINS").split(",") 
 
 
 settings = Settings()

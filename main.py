@@ -38,7 +38,7 @@ async def bootstrap() -> None:
 
     print("[BOOTSTRAP] Inicializando conexión a PostgreSQL...")
     if not settings.POSTGRES_CONNECTION_STRING:
-        print("[BOOTSTRAP] ⚠️ POSTGRES_CONNECTION_STRING no configurada")
+        print("[BOOTSTRAP] POSTGRES_CONNECTION_STRING no configurada")
         _memory = None
     else:
         try:
@@ -83,7 +83,6 @@ async def bootstrap() -> None:
                 openai_api_base=settings.OPENAI_URL,
                 check_embedding_ctx_length=False  # Desactiva validación de longitud
             )
-            print("[BOOTSTRAP]  Embeddings locales (text-embedding-multilingual-e5-large-instruct) inicializados correctamente")
     except Exception as e:
         print(f"[BOOTSTRAP]  Error inicializando embeddings: {e}")
         import traceback
@@ -129,8 +128,6 @@ async def on_startup():
 
 @app.post("/chat", response_model=ChatResponse)
 async def chat_endpoint(request: ChatRequest):
-
-    print(f"[CHAT] Mensaje recibido de {request.chat_id}: {request.message}")
     
     try:
         if _agent is None:
@@ -140,9 +137,7 @@ async def chat_endpoint(request: ChatRequest):
             )
         
         reply = await _agent.run(request.chat_id, request.message)
-        
-        print(f"[CHAT] Respuesta generada para {request.chat_id}: {reply[:100]}...")
-        
+                
         return ChatResponse(chat_id=request.chat_id, response=reply)
         
     except HTTPException:
@@ -159,8 +154,6 @@ async def chat_endpoint(request: ChatRequest):
 
 @app.get("/chat/{chat_id}/history")
 async def get_chat_history(chat_id: str, limit: int = 10):
-
-    print(f"[HISTORY] Solicitando historial de {chat_id} (limit={limit})")
     
     try:
         if _memory is None:
@@ -189,12 +182,34 @@ async def get_chat_history(chat_id: str, limit: int = 10):
 
 @app.get("/health")
 async def health_check():
-
-    return {
+    from datetime import datetime, timezone
+    from fastapi.responses import JSONResponse
+    health_status = {
         "status": "ok",
-        "agent_ready": _agent is not None,
-        "memory_ready": _memory is not None,
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "checks": {}
     }
+    
+    health_status["checks"]["agent"] = _agent is not None
+    try:
+        if _memory and _memory._pool:
+            async with _memory._pool.acquire() as conn:
+                await conn.fetchval("SELECT 1")
+        health_status["checks"]["postgres"] = True
+    except Exception as e:
+        health_status["checks"]["postgres"] = False
+        health_status["status"] = "degraded"
+        
+    try:
+        if _agent and _agent.tool1:
+            await _agent.tool1("test", k=1)
+            health_status["checks"]["qdrant"] = True
+    except Exception:
+        health_status["checks"]["qdrant"] = False
+        health_status["status"] = "degraded"
+    
+    status_code = 200 if health_status["status"] == "ok" else 503
+    return JSONResponse(content=health_status, status_code=status_code)
 
 
 if __name__ == "__main__":
